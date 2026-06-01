@@ -1,0 +1,82 @@
+# kip-pose-viewer orchestration.
+#
+# NOTE: yolo-svc and fp-svc build FROM the locally-built `foundationpose:blackwell`
+#       image (torch 2.11.0+cu128 for Blackwell sm_120, opencv, numpy). Build that
+#       image first. gigapose-svc builds FROM the locally-built `gigapose:blackwell`
+#       image (a SEPARATE base — GigaPose pins xformers/pytorch-lightning against an
+#       older torch and cannot reuse foundationpose:blackwell); build that image too,
+#       and clone GigaPose to /home/yannic/code/GigaPose with rendered templates
+#       before starting gigapose-svc. All GPU services also require the NVIDIA
+#       Container Toolkit (nvidia-container-toolkit) so Docker can expose the GPU.
+#
+# The frontend is run separately in dev mode (cd frontend && npm install && npm run dev)
+# and is not part of this compose file.
+
+services:
+  yolo-svc:
+    build: ./yolo-svc
+    ports:
+      - "8001:8001"
+    environment:
+      YOLO_WEIGHTS: /weights/best.pt
+    volumes:
+      # YOLO segmentation weights, mounted read-only from the training repo.
+      - /home/yannic/code/kip-pose-detection/training/runs/poc500_yolo26n_seg/weights/best.pt:/weights/best.pt:ro
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  fp-svc:
+    build: ./fp-svc
+    ports:
+      - "8002:8002"
+    volumes:
+      # FoundationPose code + weights, read-only.
+      - /home/yannic/code/FoundationPose:/workspace/FoundationPose:ro
+      # CAD meshes (metres), read-only.
+      - ./assets/meshes:/assets/meshes:ro
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  gigapose-svc:
+    build: ./gigapose-svc
+    ports:
+      - "8003:8003"
+    volumes:
+      # GigaPose checkout: code + checkpoints (pretrained/), CAD (datasets/kip2/models),
+      # rendered templates (datasets/templates/kip2) and the DINOv2 torch-hub cache
+      # (torch_cache/). Mounted rw so the template loader can write its preprocessed
+      # cache; all weights stay on the host (not baked into the image).
+      - /home/yannic/code/GigaPose:/workspace/GigaPose
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    environment:
+      YOLO_URL: http://yolo-svc:8001
+      FP_URL: http://fp-svc:8002
+      GIGAPOSE_URL: http://gigapose-svc:8003
+    depends_on:
+      - yolo-svc
+      - fp-svc
+      - gigapose-svc

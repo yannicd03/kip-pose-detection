@@ -1,0 +1,439 @@
+:root {
+  --bg: #14161a;
+  --panel-bg: #1c1f26;
+  --panel-border: #2a2e38;
+  --fg: #e6e8ec;
+  --muted: #8b909c;
+  --accent: #4f8cff;
+  --accent-hover: #6ba0ff;
+  --field-bg: #11141a;
+  --good: #43d17a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 14px;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ---- Control panel ---- */
+.panel {
+  width: 320px;
+  min-width: 320px;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--panel-border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Keep panel children at their natural height so a long multi-line status
+   message can't be shrunk by flexbox and overflow on top of the sections
+   below — the panel scrolls instead. */
+.panel > * {
+  flex-shrink: 0;
+}
+
+.panel h1 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.panel h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.panel section {
+  border-top: 1px solid var(--panel-border);
+  padding-top: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.field > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field input,
+.checkbox input + span {
+  color: var(--fg);
+}
+
+input[type="number"],
+input[type="text"],
+select {
+  background: var(--field-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 6px 8px;
+  font-size: 13px;
+  width: 100%;
+}
+
+input[type="file"] {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.infotip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--field-bg);
+  font-size: 9px;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.infotip:hover,
+.infotip:focus-visible {
+  color: var(--fg);
+  border-color: var(--muted);
+  outline: none;
+}
+
+/* Portal tooltip bubble (rendered to <body>, positioned with fixed coords). */
+.infotip-bubble {
+  position: fixed;
+  z-index: 1000;
+  transform: translateY(-50%);
+  max-width: 240px;
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: #11161d;
+  color: var(--fg);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  animation: infotip-in 90ms ease-out;
+}
+
+/* When flipped to the left of the icon, anchor by the right edge. */
+.infotip-bubble.flip {
+  transform: translate(-100%, -50%);
+}
+
+@keyframes infotip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- Mode switch ---- */
+.modeswitch {
+  display: flex;
+  gap: 4px;
+  background: var(--field-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.modeswitch button {
+  flex: 1;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-weight: 600;
+}
+
+.modeswitch button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ---- Layer groups ---- */
+.layergroup {
+  margin: 8px 0 4px;
+  padding-left: 6px;
+  border-left: 2px solid var(--panel-border);
+}
+
+.grouplabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+/* ---- Object lists ---- */
+.listhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.linkbtn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.convert-toggle {
+  display: block;
+  text-align: left;
+  margin: 2px 0 6px;
+  font-size: 12px;
+}
+
+.convert-box {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--field-bg);
+}
+
+.convert-box .field {
+  margin-bottom: 8px;
+}
+
+.objlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.objlist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--field-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+.objlist .cls {
+  font-weight: 600;
+  flex: 1;
+}
+
+.objlist .conf {
+  color: var(--good);
+  font-size: 12px;
+}
+
+.objlist input[type="checkbox"] {
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.checkbox input {
+  accent-color: var(--accent);
+}
+
+button {
+  border: none;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button.secondary {
+  background: var(--field-bg);
+  color: var(--fg);
+  border: 1px solid var(--panel-border);
+  width: 100%;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  min-height: 1.2em;
+}
+
+.instances {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.instances li {
+  display: flex;
+  justify-content: space-between;
+  background: var(--field-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.instances .cls {
+  font-weight: 600;
+}
+
+.instances .conf {
+  color: var(--good);
+}
+
+/* ---- 3D stage ---- */
+.stage {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #0c0e12;
+}
+
+.viewer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* RGB backdrop and the canvas share the same box so they overlay aligned. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.canvas-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* 3D mode owns the whole stage (no RGB backdrop behind it). */
+.canvas3d {
+  z-index: 0;
+}
+
+/* 2D overlay SVG: shares the backdrop's box and letterboxing. */
+.overlay2d {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-align: center;
+  padding: 24px;
+}
