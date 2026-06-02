@@ -179,7 +179,7 @@ Poses are in the universal `T_cam_obj` schema (OpenCV camera frame, metres) —
 the same convention `POST /predict` returns.
 
 **Why this is server-side.** The conversion mirrors
-`kip-pose-detection/fp_build_scene.py` exactly (USD→OpenCV
+`kip-pose-detection/pose_eval/fp_build_scene.py` exactly (USD→OpenCV
 `D_FLIP = diag(1, -1, -1, 1)`, strip the `0.001` asset scale baked into the
 `bbox_3d` rows, then compose with world→cam) and is verified bit-identical to it
 (max abs diff `9.8e-9`). It also has to happen off the browser: the canvas is
@@ -332,6 +332,6 @@ Run the steps above and validate before relying on results.
 
 ## See also
 
-- [FOUNDATIONPOSE.md](../kip-pose-detection/FOUNDATIONPOSE.md) in the
+- [FOUNDATIONPOSE.md](../kip-pose-detection/pose_eval/FOUNDATIONPOSE.md) in the
   `kip-pose-detection` repo for FoundationPose setup and the Blackwell base
   image.

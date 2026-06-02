@@ -13,7 +13,7 @@ The viewer is convention-agnostic: it only ever consumes ``T_cam_obj`` (OpenCV
 camera frame, metres) + an optional instance mask. Raw SDG output is NOT that —
 ``bbox_3d_*.json`` stores a row-major native->world transform with a 0.001 asset
 scale baked in. This script performs the same conversion as
-``kip-pose-detection/fp_build_scene.py`` (D_FLIP USD->OpenCV, 0.001 unscale,
+``kip-pose-detection/pose_eval/fp_build_scene.py`` (D_FLIP USD->OpenCV, 0.001 unscale,
 world->cam extrinsic), verified bit-identical to it.
 
 Inputs per frame (default names, --frame N):

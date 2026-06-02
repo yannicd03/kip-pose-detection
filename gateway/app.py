@@ -117,7 +117,7 @@ app.add_middleware(
 # The viewer only ever consumes T_cam_obj (OpenCV cam frame, metres). Raw Isaac
 # Sim SDG output stores 6-DoF GT as a row-major native->world transform with a
 # 0.001 asset scale baked in (bbox_3d_*.json). This converts it, mirroring
-# kip-pose-detection/fp_build_scene.py exactly. Conversion lives server-side
+# kip-pose-detection/pose_eval/fp_build_scene.py exactly. Conversion lives server-side
 # because the math is non-trivial/shared with the detection repo, and because the
 # browser canvas is 8-bit and would corrupt instance ids > 255 in the PNG.
 D_FLIP = np.diag([1.0, -1.0, -1.0, 1.0])  # USD camera -> OpenCV camera
