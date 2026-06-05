@@ -19,6 +19,8 @@
 #   GIGAPOSE_DIR        GigaPose checkout (code, pretrained/, datasets/, templates)
 #   YOLO_WEIGHTS_PT     YOLO26n-seg checkpoint (.pt); a copy is bundled at
 #                       ./assets/weights/best.pt
+#   HF_CACHE_DIR        HuggingFace cache holding the gated facebook/sam3
+#                       snapshot (for sam3-svc; offline at runtime)
 #
 # The frontend is run separately in dev mode (cd frontend && npm install && npm run dev)
 # and is not part of this compose file.
@@ -81,6 +83,36 @@ services:
               count: all
               capabilities: [gpu]
 
+  sam3-svc:
+    build: ./sam3-svc
+    ports:
+      - "8004:8004"
+    environment:
+      # facebook/sam3 is gated on HF: weights must already sit in the mounted
+      # cache (accept the license + download once on the host). Offline mode
+      # keeps the service from ever touching the network.
+      HF_HOME: /hf-cache
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      # Tuning knobs (see sam3-svc/app.py). NOTE: the per-class text prompts
+      # find armature instances well but do NOT reliably separate anker_kurz
+      # from anker_lang (measured: a mixed scene came back all-anker_lang).
+      # Treat SAM3 classes as approximate; YOLO remains the classifying source.
+      SAM3_CONF: ${SAM3_CONF:-0.2}
+      SAM3_NMS_IOU: ${SAM3_NMS_IOU:-0.5}
+      SAM3_PROMPTS: ${SAM3_PROMPTS:-}
+    volumes:
+      # Host HuggingFace cache with the facebook/sam3 snapshot, read-only.
+      - ${HF_CACHE_DIR:-~/.cache/huggingface}:/hf-cache:ro
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   gateway:
     build: ./gateway
     ports:
@@ -89,7 +121,9 @@ services:
       YOLO_URL: http://yolo-svc:8001
       FP_URL: http://fp-svc:8002
       GIGAPOSE_URL: http://gigapose-svc:8003
+      SAM3_URL: http://sam3-svc:8004
     depends_on:
       - yolo-svc
       - fp-svc
       - gigapose-svc
+      - sam3-svc

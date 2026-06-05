@@ -71,6 +71,7 @@ export interface SegSource {
 
 export const SEG_SOURCES: SegSource[] = [
   { id: "yolo", label: "YOLO26n-seg (infer masks)" },
+  { id: "sam3", label: "SAM3 (promptable concept masks)" },
   { id: "gt", label: "Ground-truth masks (sim)", needsGtMasks: true },
 ];
 

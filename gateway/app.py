@@ -41,6 +41,7 @@ from fastapi.middleware.cors import CORSMiddleware
 YOLO_URL = os.environ.get("YOLO_URL", "http://yolo-svc:8001")
 FP_URL = os.environ.get("FP_URL", "http://fp-svc:8002")
 GIGAPOSE_URL = os.environ.get("GIGAPOSE_URL", "http://gigapose-svc:8003")
+SAM3_URL = os.environ.get("SAM3_URL", "http://sam3-svc:8004")
 
 # ── Segmentation-source registry (the mask-source dropdown) ─────────────────
 # A segmentation source produces per-instance masks. INFER sources are HTTP
@@ -49,6 +50,7 @@ GIGAPOSE_URL = os.environ.get("GIGAPOSE_URL", "http://gigapose-svc:8003")
 # add its URL here, and add a matching option in the frontend dropdown.
 INFER_SOURCES = {
     "yolo": {"label": "YOLO26n-seg (infer masks)", "url": YOLO_URL},
+    "sam3": {"label": "SAM3 (promptable concept masks)", "url": SAM3_URL},
 }
 # "gt" is a special non-inference source: the caller supplies ground-truth masks
 # (the sim instance segmentation) directly in the request, so no model is run.
@@ -301,10 +303,12 @@ async def health():
     yolo = await ping(YOLO_URL)
     fp = await ping(FP_URL)
     gigapose = await ping(GIGAPOSE_URL)
-    # fp + yolo must be up for the default pipeline; gigapose is reported but does
-    # not gate overall health (it may be intentionally not running to save VRAM).
+    sam3 = await ping(SAM3_URL)
+    # fp + yolo must be up for the default pipeline; gigapose and sam3 are
+    # reported but do not gate overall health (either may be intentionally not
+    # running to save VRAM).
     ok = bool(yolo.get("ok")) and bool(fp.get("ok"))
-    return {"ok": ok, "yolo": yolo, "fp": fp, "gigapose": gigapose}
+    return {"ok": ok, "yolo": yolo, "fp": fp, "gigapose": gigapose, "sam3": sam3}
 
 
 @app.get("/sources")

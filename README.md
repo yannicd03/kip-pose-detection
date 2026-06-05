@@ -2,9 +2,9 @@
 
 A browser tool for 6-DoF pose estimation. Upload an RGB image, a depth map
 (uint16 millimetres) and camera intrinsics; the tool runs instance
-segmentation (**YOLO26n-seg** today; promptable **SAM3** segmentation is in
-progress), hands each instance to a 6-DoF pose estimator (**FoundationPose**
-or **GigaPose**), and renders the result in either of two viewer modes:
+segmentation (**YOLO26n-seg** or promptable **SAM3** concept segmentation),
+hands each instance to a 6-DoF pose estimator (**FoundationPose** or
+**GigaPose**), and renders the result in either of two viewer modes:
 
 - **2D overlay** — the RGB image as a backdrop with per-object instance masks
   drawn translucent on top, plus projected coordinate triads. There is no mesh
@@ -23,10 +23,18 @@ shown or hidden.
 ## Architecture
 
 Two independent stages, both selectable in the frontend: the **segmentation
-source** (ground-truth masks, YOLO26n-seg, or — in progress — SAM3) produces
-instance masks, and the **pose estimator** (FoundationPose, GigaPose RGB-D,
-or GigaPose RGB-only) consumes them. GigaPose is a pose estimator, not a
-segmenter, so it never appears in the segmentation dropdown.
+source** (ground-truth masks, YOLO26n-seg, or SAM3) produces instance masks,
+and the **pose estimator** (FoundationPose, GigaPose RGB-D, or GigaPose
+RGB-only) consumes them. GigaPose is a pose estimator, not a segmenter, so it
+never appears in the segmentation dropdown.
+
+SAM3 segments training-free from text concept prompts (one per class,
+configurable via `SAM3_PROMPTS`), but cannot reliably tell `anker_kurz` from
+`anker_lang` — both prompts match every armature, so class labels from SAM3
+are approximate (measured on the bundled sample: all instances came back as
+one class). Use YOLO when classes matter; use SAM3 for mask quality on
+objects the YOLO checkpoint was never trained on. Details in
+`sam3-svc/app.py`.
 
 ```mermaid
 flowchart TD
@@ -34,25 +42,25 @@ flowchart TD
         FE["<b>frontend</b><br/>Vite dev server + three.js<br/>localhost:5173<br/><i>(npm run dev — not in compose)</i>"]
         FPREPO[("FoundationPose checkout<br/>code + weights/")]
         GPREPO[("GigaPose checkout<br/>code + pretrained/ + templates")]
+        HFCACHE[("HF cache<br/>facebook/sam3 snapshot")]
     end
 
     subgraph compose["docker compose"]
         GW["<b>gateway</b> :8000<br/>python:3.11-slim — CPU<br/>fan-out, top_n, SDG→overlay conversion"]
         YOLO["<b>yolo-svc</b> :8001<br/>FROM foundationpose:blackwell — GPU<br/>Ultralytics YOLO26n-seg"]
-        SAM3["<b>sam3-svc</b> :8004 — planned<br/>FROM foundationpose:blackwell-sam3 — GPU<br/>SAM3 promptable segmentation"]
+        SAM3["<b>sam3-svc</b> :8004<br/>FROM foundationpose:blackwell-sam3 — GPU<br/>SAM3 promptable concept segmentation"]
         FP["<b>fp-svc</b> :8002<br/>FROM foundationpose:blackwell — GPU<br/>FoundationPose 6-DoF"]
         GP["<b>gigapose-svc</b> :8003<br/>FROM gigapose:blackwell — GPU<br/>GigaPose coarse + GenFlow refine"]
     end
 
     FE -->|"multipart POST /predict"| GW
     GW -->|"POST /segment"| YOLO
-    GW -.->|"POST /segment (planned)"| SAM3
+    GW -->|"POST /segment"| SAM3
     GW -->|"POST /pose — foundationpose"| FP
     GW -->|"POST /pose — gigapose_rgbd / gigapose_rgb"| GP
     FPREPO -.->|"ro → /workspace/FoundationPose"| FP
     GPREPO -.->|"rw → /workspace/GigaPose"| GP
-
-    style SAM3 stroke-dasharray: 6 4
+    HFCACHE -.->|"ro → /hf-cache"| SAM3
 ```
 
 | service        | port | base image                       | GPU | host mounts                                              | role                                   |
@@ -61,7 +69,7 @@ flowchart TD
 | `yolo-svc`     | 8001 | `foundationpose:blackwell`       | ✓   | YOLO weights → `/weights/best.pt` (ro)                    | instance segmentation (YOLO26n-seg)     |
 | `fp-svc`       | 8002 | `foundationpose:blackwell`       | ✓   | FoundationPose checkout → `/workspace/FoundationPose` (ro), `assets/meshes` → `/assets/meshes` (ro) | 6-DoF pose (FoundationPose) |
 | `gigapose-svc` | 8003 | `gigapose:blackwell`             | ✓   | GigaPose checkout → `/workspace/GigaPose` (rw)            | 6-DoF pose (GigaPose + GenFlow)         |
-| `sam3-svc`     | 8004 | `foundationpose:blackwell-sam3`  | ✓   | *(planned — image built, service not yet in compose)*     | promptable segmentation (SAM3)          |
+| `sam3-svc`     | 8004 | `foundationpose:blackwell-sam3`  | ✓   | HF cache → `/hf-cache` (ro, offline)                      | promptable concept segmentation (SAM3)  |
 
 The GPU services build on two locally-built base images —
 `foundationpose:blackwell` (torch 2.11.0+cu128 for Blackwell sm_120; the
@@ -87,6 +95,11 @@ frontend runs on the host, outside compose.
 - **YOLO weights** (`.pt`, class ids `0=anker_kurz`, `1=anker_lang`). A trained
   copy is bundled at `assets/weights/best.pt`; path set via `YOLO_WEIGHTS_PT`,
   see below.
+- **SAM3 snapshot** in your HuggingFace cache (for `sam3-svc`). The model is
+  gated: accept the license at
+  [huggingface.co/facebook/sam3](https://huggingface.co/facebook/sam3), then
+  `hf download facebook/sam3` once on the host. The service mounts the cache
+  read-only and runs fully offline. Path set via `HF_CACHE_DIR`, see below.
 - **Node.js + npm** for the frontend dev server.
 
 ### Host paths (`.env`)
@@ -100,6 +113,7 @@ Host paths for the volume mounts are configured in `.env`, which
 | `FOUNDATIONPOSE_DIR` | `fp-svc:/workspace/FoundationPose`| `../FoundationPose`        |
 | `GIGAPOSE_DIR`       | `gigapose-svc:/workspace/GigaPose`| `../GigaPose`              |
 | `YOLO_WEIGHTS_PT`    | `yolo-svc:/weights/best.pt`       | `./assets/weights/best.pt` |
+| `HF_CACHE_DIR`       | `sam3-svc:/hf-cache` (ro)         | `~/.cache/huggingface`     |
 
 If FoundationPose and GigaPose are checked out as siblings of this repo and
 you use the bundled YOLO weights, you don't need a `.env` at all: the compose
