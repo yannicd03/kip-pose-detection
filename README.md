@@ -52,15 +52,39 @@ NVIDIA Container Toolkit. The gateway is CPU-only.
 ## Prerequisites
 
 - **`foundationpose:blackwell` base image** built locally (used by `yolo-svc`
-  and `fp-svc`). Check with `docker image ls | grep foundationpose`.
+  and `fp-svc`). Built from `docker/Dockerfile.blackwell` in the FoundationPose
+  checkout. Check with `docker image ls | grep foundationpose`.
+- **`gigapose:blackwell` base image** built locally (used by `gigapose-svc`; a
+  separate base — GigaPose pins xformers/pytorch-lightning against an older
+  torch). Built from `docker/Dockerfile.blackwell` in the GigaPose checkout.
 - **NVIDIA Container Toolkit** (`nvidia-container-toolkit`) installed and
   configured so Docker can pass `--gpus all` to containers.
-- **YOLO weights** present on the host at
-  `/home/yannic/code/kip-pose-detection/training/runs/poc500_yolo26n_seg/weights/best.pt`
-  (class ids `0=anker_kurz`, `1=anker_lang`).
-- **FoundationPose checkout** at `~/code/FoundationPose` (provides the code and
-  model weights; mounted read-only into `fp-svc`).
+- **FoundationPose checkout** (code + model weights; mounted read-only into
+  `fp-svc`). Path set via `FOUNDATIONPOSE_DIR`, see below.
+- **GigaPose checkout** with `pretrained/`, `datasets/kip2/models` and rendered
+  templates (`datasets/templates/kip2`); mounted rw into `gigapose-svc`. Path
+  set via `GIGAPOSE_DIR`, see below.
+- **YOLO weights** (`.pt`, class ids `0=anker_kurz`, `1=anker_lang`). A trained
+  copy is bundled at `assets/weights/best.pt`; path set via `YOLO_WEIGHTS_PT`,
+  see below.
 - **Node.js + npm** for the frontend dev server.
+
+### Host paths (`.env`)
+
+Host paths for the volume mounts are configured in [`.env`](.env), which
+`docker compose` reads automatically:
+
+| variable             | mounts into                       | default                    |
+| -------------------- | --------------------------------- | -------------------------- |
+| `FOUNDATIONPOSE_DIR` | `fp-svc:/workspace/FoundationPose`| `../FoundationPose`        |
+| `GIGAPOSE_DIR`       | `gigapose-svc:/workspace/GigaPose`| `../GigaPose`              |
+| `YOLO_WEIGHTS_PT`    | `yolo-svc:/weights/best.pt`       | `./assets/weights/best.pt` |
+
+The committed `.env` carries absolute paths for the original dev machine —
+edit it for yours. If FoundationPose and GigaPose are checked out as siblings
+of this repo and you use the bundled YOLO weights, you can instead delete
+`.env` entirely: the compose defaults (relative to the compose file) already
+point at the right places.
 
 ## Build & run
 
