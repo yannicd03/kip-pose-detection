@@ -86,6 +86,23 @@ of this repo and you use the bundled YOLO weights, you can instead delete
 `.env` entirely: the compose defaults (relative to the compose file) already
 point at the right places.
 
+### Large artifacts (model weights)
+
+The model weights that don't fit in git are mirrored in the
+[KIP shared Drive folder](https://drive.google.com/drive/folders/1nqdLp07KnoxGWrx0MydLLub6UK1HHmsA?usp=sharing):
+
+| archive                       | extract into (repo root of) | contents                              |
+| ----------------------------- | --------------------------- | ------------------------------------- |
+| `foundationpose_weights.tar.gz` | `FoundationPose/`         | refiner + scorer checkpoints (`weights/`) |
+| `gigapose_pretrained.tar.gz`  | `GigaPose/`                 | `gigaPose_v1.ckpt` + megapose models (`pretrained/`) |
+| `gigapose_torch_cache.tar.gz` | `GigaPose/`                 | optional DINOv2 torch-hub cache (`torch_cache/`) |
+
+```bash
+tar -xzf foundationpose_weights.tar.gz -C ../FoundationPose
+tar -xzf gigapose_pretrained.tar.gz    -C ../GigaPose
+tar -xzf gigapose_torch_cache.tar.gz   -C ../GigaPose   # optional
+```
+
 ## Build & run
 
 1. Build and start the three backend services:
