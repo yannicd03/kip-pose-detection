@@ -88,20 +88,16 @@ point at the right places.
 
 ### Large artifacts (model weights)
 
-The model weights that don't fit in git are mirrored in the
-[KIP shared Drive folder](https://drive.google.com/drive/folders/1nqdLp07KnoxGWrx0MydLLub6UK1HHmsA?usp=sharing):
+The model weights that don't fit in git are all publicly available upstream:
 
-| archive                       | extract into (repo root of) | contents                              |
-| ----------------------------- | --------------------------- | ------------------------------------- |
-| `foundationpose_weights.tar.gz` | `FoundationPose/`         | refiner + scorer checkpoints (`weights/`) |
-| `gigapose_pretrained.tar.gz`  | `GigaPose/`                 | `gigaPose_v1.ckpt` + megapose models (`pretrained/`) |
-| `gigapose_torch_cache.tar.gz` | `GigaPose/`                 | optional DINOv2 torch-hub cache (`torch_cache/`) |
+| weights                            | goes into                  | source                                                       |
+| ---------------------------------- | -------------------------- | ------------------------------------------------------------ |
+| FoundationPose refiner + scorer    | `FoundationPose/weights/`  | official link in the FoundationPose README (install steps)   |
+| `gigaPose_v1.ckpt` + megapose models | `GigaPose/pretrained/`   | `download_gigapose` / `download_megapose` scripts in the GigaPose README |
+| DINOv2 torch-hub cache             | `GigaPose/torch_cache/`    | auto-downloaded on first run                                  |
 
-```bash
-tar -xzf foundationpose_weights.tar.gz -C ../FoundationPose
-tar -xzf gigapose_pretrained.tar.gz    -C ../GigaPose
-tar -xzf gigapose_torch_cache.tar.gz   -C ../GigaPose   # optional
-```
+The custom YOLO26n-seg checkpoint is small and ships with this repo
+(`assets/weights/best.pt`).
 
 ## Build & run
 
