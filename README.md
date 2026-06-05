@@ -1,9 +1,10 @@
 # kip-pose-viewer
 
 A browser tool for 6-DoF pose estimation. Upload an RGB image, a depth map
-(uint16 millimetres) and camera intrinsics; the tool runs **YOLO26n-seg** for
-instance segmentation, hands each instance to **FoundationPose** for pose
-estimation, and renders the result in either of two viewer modes:
+(uint16 millimetres) and camera intrinsics; the tool runs instance
+segmentation (**YOLO26n-seg** today; promptable **SAM3** segmentation is in
+progress), hands each instance to a 6-DoF pose estimator (**FoundationPose**
+or **GigaPose**), and renders the result in either of two viewer modes:
 
 - **2D overlay** — the RGB image as a backdrop with per-object instance masks
   drawn translucent on top, plus projected coordinate triads. There is no mesh
@@ -21,33 +22,52 @@ shown or hidden.
 
 ## Architecture
 
-```
-                          ┌──────────────────────────────────────────────┐
-                          │              browser frontend                 │
-                          │   (Vite dev server, three.js viewer)          │
-                          │            http://localhost:5173              │
-                          └───────────────────────┬──────────────────────┘
-                                                   │  multipart POST /predict
-                                                   ▼
-                          ┌──────────────────────────────────────────────┐
-                          │                 gateway  :8000                │
-                          │      python:3.11-slim  (CPU only, CORS)       │
-                          │  rgb→b64, fan-out to the two GPU services,    │
-                          │  top_n filter, merge conf, optional pointcloud│
-                          └───────────┬───────────────────────┬──────────┘
-                                      │ POST /segment          │ POST /pose
-                                      ▼                        ▼
-                  ┌───────────────────────────┐   ┌───────────────────────────┐
-                  │       yolo-svc  :8001      │   │        fp-svc  :8002       │
-                  │  FROM foundationpose:      │   │  FROM foundationpose:      │
-                  │       blackwell  (GPU)     │   │       blackwell  (GPU)     │
-                  │  Ultralytics YOLO26n-seg   │   │  FoundationPose 6-DoF      │
-                  └───────────────────────────┘   └───────────────────────────┘
+Two independent stages, both selectable in the frontend: the **segmentation
+source** (ground-truth masks, YOLO26n-seg, or — in progress — SAM3) produces
+instance masks, and the **pose estimator** (FoundationPose, GigaPose RGB-D,
+or GigaPose RGB-only) consumes them. GigaPose is a pose estimator, not a
+segmenter, so it never appears in the segmentation dropdown.
+
+```mermaid
+flowchart TD
+    subgraph host["Host"]
+        FE["<b>frontend</b><br/>Vite dev server + three.js<br/>localhost:5173<br/><i>(npm run dev — not in compose)</i>"]
+        FPREPO[("FoundationPose checkout<br/>code + weights/")]
+        GPREPO[("GigaPose checkout<br/>code + pretrained/ + templates")]
+    end
+
+    subgraph compose["docker compose"]
+        GW["<b>gateway</b> :8000<br/>python:3.11-slim — CPU<br/>fan-out, top_n, SDG→overlay conversion"]
+        YOLO["<b>yolo-svc</b> :8001<br/>FROM foundationpose:blackwell — GPU<br/>Ultralytics YOLO26n-seg"]
+        SAM3["<b>sam3-svc</b> :8004 — planned<br/>FROM foundationpose:blackwell-sam3 — GPU<br/>SAM3 promptable segmentation"]
+        FP["<b>fp-svc</b> :8002<br/>FROM foundationpose:blackwell — GPU<br/>FoundationPose 6-DoF"]
+        GP["<b>gigapose-svc</b> :8003<br/>FROM gigapose:blackwell — GPU<br/>GigaPose coarse + GenFlow refine"]
+    end
+
+    FE -->|"multipart POST /predict"| GW
+    GW -->|"POST /segment"| YOLO
+    GW -.->|"POST /segment (planned)"| SAM3
+    GW -->|"POST /pose — foundationpose"| FP
+    GW -->|"POST /pose — gigapose_rgbd / gigapose_rgb"| GP
+    FPREPO -.->|"ro → /workspace/FoundationPose"| FP
+    GPREPO -.->|"rw → /workspace/GigaPose"| GP
+
+    style SAM3 stroke-dasharray: 6 4
 ```
 
-Both GPU services build on the locally-built `foundationpose:blackwell` base
-image (torch 2.11.0+cu128 for Blackwell sm_120, opencv, numpy) and require the
-NVIDIA Container Toolkit. The gateway is CPU-only.
+| service        | port | base image                       | GPU | host mounts                                              | role                                   |
+| -------------- | ---- | -------------------------------- | --- | -------------------------------------------------------- | -------------------------------------- |
+| `gateway`      | 8000 | `python:3.11-slim`               | –   | –                                                         | CORS, fan-out, merge, SDG conversion    |
+| `yolo-svc`     | 8001 | `foundationpose:blackwell`       | ✓   | YOLO weights → `/weights/best.pt` (ro)                    | instance segmentation (YOLO26n-seg)     |
+| `fp-svc`       | 8002 | `foundationpose:blackwell`       | ✓   | FoundationPose checkout → `/workspace/FoundationPose` (ro), `assets/meshes` → `/assets/meshes` (ro) | 6-DoF pose (FoundationPose) |
+| `gigapose-svc` | 8003 | `gigapose:blackwell`             | ✓   | GigaPose checkout → `/workspace/GigaPose` (rw)            | 6-DoF pose (GigaPose + GenFlow)         |
+| `sam3-svc`     | 8004 | `foundationpose:blackwell-sam3`  | ✓   | *(planned — image built, service not yet in compose)*     | promptable segmentation (SAM3)          |
+
+The GPU services build on two locally-built base images —
+`foundationpose:blackwell` (torch 2.11.0+cu128 for Blackwell sm_120; the
+`-sam3` variant adds `transformers>=5` + `accelerate`) and `gigapose:blackwell`
+— and require the NVIDIA Container Toolkit. The gateway is CPU-only; the
+frontend runs on the host, outside compose.
 
 ## Prerequisites
 
