@@ -76,6 +76,18 @@ export const SEG_SOURCES: SegSource[] = [
 ];
 
 /**
+ * Default SAM3 concept prompts, one per class. Shown (editable) in the UI when
+ * the SAM3 segmentation source is selected and sent as a per-request override;
+ * must mirror the sam3-svc SAM3_PROMPTS defaults. Note: the prompts find
+ * armature instances well but do NOT reliably separate kurz from lang — SAM3
+ * class labels are approximate (see sam3-svc/app.py).
+ */
+export const SAM3_DEFAULT_PROMPTS: Record<string, string> = {
+  anker_kurz: "short metal motor armature part",
+  anker_lang: "long metal motor armature part",
+};
+
+/**
  * Pose estimator selection — a stage *separate* from the segmentation source
  * above. The seg source decides how masks are produced; the pose source decides
  * which 6-DoF estimator consumes them. Add a future estimator here AND register
@@ -108,6 +120,8 @@ export interface PredictParams {
   poseSource: string;
   /** JSON string of the GT mask bundle, required when segSource needs GT masks. */
   gtMasks?: string;
+  /** Per-class SAM3 concept prompts, sent only for the sam3 seg source. */
+  segPrompts?: Record<string, string>;
 }
 
 export async function predict(params: PredictParams): Promise<PredictResponse> {
@@ -121,6 +135,7 @@ export async function predict(params: PredictParams): Promise<PredictResponse> {
     segSource,
     poseSource,
     gtMasks,
+    segPrompts,
   } = params;
   const form = new FormData();
   form.append("rgb", rgb);
@@ -142,6 +157,9 @@ export async function predict(params: PredictParams): Promise<PredictResponse> {
   form.append("pose_source", poseSource);
   if (gtMasks) {
     form.append("gt_masks", gtMasks);
+  }
+  if (segPrompts && Object.keys(segPrompts).length > 0) {
+    form.append("seg_prompts", JSON.stringify(segPrompts));
   }
 
   const res = await fetch(`${GATEWAY_URL}/predict`, {

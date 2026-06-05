@@ -34,7 +34,9 @@ the gateway already has at predict time. Use full extent, NOT
 percentile-trimmed (trimming amplifies occlusion truncation).
 
 POST /segment
-  { "rgb_b64": <base64 PNG, uint8 RGB> }
+  { "rgb_b64": <base64 PNG, uint8 RGB>,
+    "prompts": {class: concept prompt, ...} }   # optional per-request override,
+                                                # merged over the env defaults
 ->{ "detections": [ {"id":0, "class":"anker_kurz", "conf":0.31,
                      "mask_b64": <base64 PNG, 0/255 single channel>}, ... ] }
 
@@ -88,6 +90,9 @@ def load_model():
 
 class SegmentReq(BaseModel):
     rgb_b64: str
+    # Optional per-request {class: concept prompt} override. Merged over the
+    # SAM3_PROMPTS env defaults per class; blank values fall back to defaults.
+    prompts: dict[str, str] | None = None
 
 
 def _b64_png_to_pil(b64):
@@ -131,12 +136,14 @@ def segment(req: SegmentReq):
     img = _b64_png_to_pil(req.rgb_b64)
     w, h = img.size
 
-    classes = list(PROMPTS.keys())
+    overrides = {k: v.strip() for k, v in (req.prompts or {}).items() if v.strip()}
+    prompts = {**PROMPTS, **overrides}
+    classes = list(prompts.keys())
     # One batch entry per class prompt: SAM3 segments every instance of one
     # concept per forward pass; batching the prompts shares the image encoder.
     inputs = PROCESSOR(
         images=[img] * len(classes),
-        text=[PROMPTS[c] for c in classes],
+        text=[prompts[c] for c in classes],
         return_tensors="pt",
     ).to(MODEL.device)
 

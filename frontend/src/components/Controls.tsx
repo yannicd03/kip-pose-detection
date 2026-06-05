@@ -16,6 +16,8 @@ interface Props {
   setMode: (m: ViewMode) => void;
   segSource: string;
   setSegSource: (s: string) => void;
+  segPrompts: Record<string, string>;
+  setSegPrompts: (p: Record<string, string>) => void;
   poseSource: string;
   setPoseSource: (s: string) => void;
   intrinsics: Intrinsics;
@@ -59,6 +61,8 @@ export default function Controls(props: Props) {
     setMode,
     segSource,
     setSegSource,
+    segPrompts,
+    setSegPrompts,
     poseSource,
     setPoseSource,
     intrinsics,
@@ -187,6 +191,31 @@ export default function Controls(props: Props) {
             ))}
           </select>
         </label>
+        {segSource === "sam3" &&
+          Object.entries(segPrompts).map(([cls, prompt]) => (
+            <label className="field" key={cls}>
+              <span>
+                SAM3 prompt — {cls}
+                <InfoTip
+                  text={
+                    "Concept prompt (short noun phrase) SAM3 uses to find every " +
+                    `instance it labels '${cls}'. Sent per request; blank falls ` +
+                    "back to the service default. Caveat: prompts retrieve " +
+                    "armatures reliably but do NOT separate kurz from lang — " +
+                    "treat SAM3 class labels as approximate."
+                  }
+                />
+              </span>
+              <input
+                type="text"
+                value={prompt}
+                placeholder="e.g. small metal object"
+                onChange={(e) =>
+                  setSegPrompts({ ...segPrompts, [cls]: e.target.value })
+                }
+              />
+            </label>
+          ))}
         <label className="field">
           <span>
             Pose estimator

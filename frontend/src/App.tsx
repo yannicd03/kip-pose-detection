@@ -8,6 +8,7 @@ import {
   fetchGtBundle,
   predict,
   POSE_SOURCES,
+  SAM3_DEFAULT_PROMPTS,
   SEG_SOURCES,
   type GtBundle,
   type Intrinsics,
@@ -67,6 +68,10 @@ export default function App() {
   const [topN, setTopN] = useState<string>("");
   const [wantPointcloud, setWantPointcloud] = useState<boolean>(false);
   const [segSource, setSegSource] = useState<string>("yolo");
+  // Per-class SAM3 concept prompts, editable in the UI when segSource==='sam3'.
+  const [segPrompts, setSegPrompts] = useState<Record<string, string>>({
+    ...SAM3_DEFAULT_PROMPTS,
+  });
   // Pose estimator — separate stage from the segmentation source above.
   const [poseSource, setPoseSource] = useState<string>("foundationpose");
   // GT mask bundle for the "gt" *segmentation source* (feeds the pose stage).
@@ -288,6 +293,7 @@ export default function App() {
         segSource,
         poseSource,
         gtMasks: src?.needsGtMasks ? gtMasks ?? undefined : undefined,
+        segPrompts: segSource === "sam3" ? segPrompts : undefined,
       });
       const dt = ((performance.now() - t0) / 1000).toFixed(2);
       setResult(res);
@@ -316,6 +322,7 @@ export default function App() {
     topN,
     wantPointcloud,
     segSource,
+    segPrompts,
     poseSource,
     gtMasks,
   ]);
@@ -327,6 +334,8 @@ export default function App() {
         setMode={setMode}
         segSource={segSource}
         setSegSource={setSegSource}
+        segPrompts={segPrompts}
+        setSegPrompts={setSegPrompts}
         poseSource={poseSource}
         setPoseSource={setPoseSource}
         intrinsics={intrinsics}

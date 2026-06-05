@@ -410,8 +410,13 @@ async def gt_overlay(
     return {"instances": instances, "num_instances": len(instances)}
 
 
-async def _segment(seg_source: str, rgb_b64: str, gt_masks: str | None) -> list[dict]:
-    """Return detections [{id,class,conf,mask_b64}] from the chosen source."""
+async def _segment(seg_source: str, rgb_b64: str, gt_masks: str | None,
+                   seg_prompts: str | None = None) -> list[dict]:
+    """Return detections [{id,class,conf,mask_b64}] from the chosen source.
+
+    seg_prompts is an optional JSON object {class: concept prompt} forwarded to
+    the segmentation service as 'prompts' (per-request override; sam3-svc merges
+    it over its env defaults, yolo-svc ignores the extra field)."""
     if seg_source == GT_SOURCE["id"]:
         if not gt_masks:
             raise HTTPException(
@@ -432,9 +437,20 @@ async def _segment(seg_source: str, rgb_b64: str, gt_masks: str | None) -> list[
     src = INFER_SOURCES.get(seg_source)
     if src is None:
         raise HTTPException(status_code=400, detail=f"unknown seg_source '{seg_source}'")
+    payload: dict = {"rgb_b64": rgb_b64}
+    if seg_prompts:
+        try:
+            prompts = json.loads(seg_prompts)
+            assert isinstance(prompts, dict) and all(
+                isinstance(k, str) and isinstance(v, str) for k, v in prompts.items())
+        except (ValueError, AssertionError):
+            raise HTTPException(
+                status_code=400,
+                detail="seg_prompts must be a JSON object {class: prompt string}")
+        payload["prompts"] = prompts
     try:
         async with httpx.AsyncClient(timeout=SEGMENT_TIMEOUT) as client:
-            r = await client.post(src["url"] + "/segment", json={"rgb_b64": rgb_b64})
+            r = await client.post(src["url"] + "/segment", json=payload)
             r.raise_for_status()
             return r.json().get("detections", [])
     except httpx.HTTPError as e:
@@ -455,6 +471,7 @@ async def predict(
     seg_source: str = Form("yolo"),
     pose_source: str = Form("foundationpose"),
     gt_masks: str | None = Form(None),
+    seg_prompts: str | None = Form(None),
 ):
     pose = POSE_SOURCES.get(pose_source)
     if pose is None:
@@ -480,7 +497,7 @@ async def predict(
 
     # 1. segmentation (chosen pipeline source: an inference model, or supplied GT)
     t_seg0 = time.perf_counter()
-    detections = await _segment(seg_source, rgb_b64, gt_masks)
+    detections = await _segment(seg_source, rgb_b64, gt_masks, seg_prompts)
     seg_ms = (time.perf_counter() - t_seg0) * 1000.0
 
     # 2. keep top_n by confidence

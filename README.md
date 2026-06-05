@@ -28,8 +28,10 @@ and the **pose estimator** (FoundationPose, GigaPose RGB-D, or GigaPose
 RGB-only) consumes them. GigaPose is a pose estimator, not a segmenter, so it
 never appears in the segmentation dropdown.
 
-SAM3 segments training-free from text concept prompts (one per class,
-configurable via `SAM3_PROMPTS`), but cannot reliably tell `anker_kurz` from
+SAM3 segments training-free from text concept prompts (one per class). When
+SAM3 is selected, the frontend shows an editable prompt box per class; the
+prompts are sent with each request (blank boxes fall back to the service's
+`SAM3_PROMPTS` env defaults). SAM3 cannot reliably tell `anker_kurz` from
 `anker_lang` — both prompts match every armature, so class labels from SAM3
 are approximate (measured on the bundled sample: all instances came back as
 one class). Use YOLO when classes matter; use SAM3 for mask quality on
