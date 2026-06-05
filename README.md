@@ -71,8 +71,9 @@ NVIDIA Container Toolkit. The gateway is CPU-only.
 
 ### Host paths (`.env`)
 
-Host paths for the volume mounts are configured in [`.env`](.env), which
-`docker compose` reads automatically:
+Host paths for the volume mounts are configured in `.env`, which
+`docker compose` reads automatically (copy [`.env.example`](.env.example) to
+`.env` and adjust):
 
 | variable             | mounts into                       | default                    |
 | -------------------- | --------------------------------- | -------------------------- |
@@ -80,11 +81,9 @@ Host paths for the volume mounts are configured in [`.env`](.env), which
 | `GIGAPOSE_DIR`       | `gigapose-svc:/workspace/GigaPose`| `../GigaPose`              |
 | `YOLO_WEIGHTS_PT`    | `yolo-svc:/weights/best.pt`       | `./assets/weights/best.pt` |
 
-The committed `.env` carries absolute paths for the original dev machine —
-edit it for yours. If FoundationPose and GigaPose are checked out as siblings
-of this repo and you use the bundled YOLO weights, you can instead delete
-`.env` entirely: the compose defaults (relative to the compose file) already
-point at the right places.
+If FoundationPose and GigaPose are checked out as siblings of this repo and
+you use the bundled YOLO weights, you don't need a `.env` at all: the compose
+defaults (relative to the compose file) already point at the right places.
 
 ### Large artifacts (model weights)
 

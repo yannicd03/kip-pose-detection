@@ -8,3 +8,6 @@ __pycache__/
 # Copies of assets served by the dev server (sourced from ../assets at setup time).
 frontend/public/meshes/
 frontend/public/samples/
+
+# Local host-path config (copy .env.example)
+.env

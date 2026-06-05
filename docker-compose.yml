@@ -11,10 +11,10 @@
 #       All GPU services also require the NVIDIA Container Toolkit
 #       (nvidia-container-toolkit) so Docker can expose the GPU.
 #
-# Host paths are configurable via .env (see .env in this repo, prefilled for the
-# original dev machine). The defaults assume FoundationPose/ and GigaPose/ are
-# checked out as siblings of this repo; relative paths are resolved against the
-# directory containing this compose file.
+# Host paths are configurable via .env (copy .env.example to .env and adjust).
+# The defaults assume FoundationPose/ and GigaPose/ are checked out as siblings
+# of this repo; relative paths are resolved against the directory containing
+# this compose file.
 #   FOUNDATIONPOSE_DIR  FoundationPose checkout (code + weights)
 #   GIGAPOSE_DIR        GigaPose checkout (code, pretrained/, datasets/, templates)
 #   YOLO_WEIGHTS_PT     YOLO26n-seg checkpoint (.pt); a copy is bundled at
