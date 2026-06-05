@@ -36,6 +36,16 @@ one class). Use YOLO when classes matter; use SAM3 for mask quality on
 objects the YOLO checkpoint was never trained on. Details in
 `sam3-svc/app.py`.
 
+> **Known upgrade path (not yet implemented):** an offline spike measured a
+> substantially better SAM3 recipe — two-pass self-prompting (generic text →
+> depth-backprojected CAD-size filter keeping 3D lengths in [85, 180] mm →
+> exemplar-box re-prompt), reaching 90.5% recall / 92.7% precision / 0.858
+> mIoU on poc500 (vs 84.7% / 77.2% / 0.71 for finetuned YOLO26n-seg), plus a
+> banded kurz/lang classifier on depth-PCA full extent (<128 mm / >133 mm,
+> ambiguous band → dual-mesh FoundationPose scoring). Adopting it requires
+> extending the `/segment` contract with optional `depth_b64` + `K` (the
+> gateway already has both at predict time).
+
 ```mermaid
 flowchart TD
     subgraph host["Host"]

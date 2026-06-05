@@ -21,6 +21,18 @@ classes needs a trained classifier - that is YOLO's job. Use SAM3 here for
 training-free, class-agnostic instance masks; treat its class labels as
 approximate.
 
+UPGRADE PATH (validated offline in the 2026-06-05 SAM3 spike, not yet
+implemented here): two-pass self-prompting - (1) generic text prompt
+("small metal object"), (2) back-project each candidate mask through metric
+depth, keep 3D PCA lengths in [85, 180] mm (CAD-size filter), (3) re-prompt
+with the best survivor's bounding box as an exemplar. Measured 90.5% recall
+/ 92.7% precision / 0.858 mIoU on poc500, beating finetuned YOLO26n-seg.
+Class identity: banded classifier on depth-PCA FULL extent along PC1
+(<128 mm -> kurz, >133 mm -> lang; ambiguous band -> run FoundationPose with
+both meshes, keep the better fit). Requires depth_b64 + K in /segment, which
+the gateway already has at predict time. Use full extent, NOT
+percentile-trimmed (trimming amplifies occlusion truncation).
+
 POST /segment
   { "rgb_b64": <base64 PNG, uint8 RGB> }
 ->{ "detections": [ {"id":0, "class":"anker_kurz", "conf":0.31,
