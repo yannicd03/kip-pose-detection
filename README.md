@@ -1,5 +1,25 @@
 # kip-pose-viewer
 
+> **Status (2026-08-01): superseded — archived, kept for history only.**
+>
+> Active development moved to `project/mesh/` in the KIP_POSE monorepo
+> (`github.com/MaxKlat29/KIP_POSE`). Do not start new work here.
+>
+> The monorepo mesh is a strict superset and has diverged well ahead of this
+> checkout: 7 services instead of 5 (adds `yolo-obb-svc` and `gdrnpp-svc`),
+> `gateway/app.py` at 1017 lines vs 583 here, `fp-svc/app.py` at 136 vs 95
+> (it carries the T-184 `FP_MAX_SIDE` CUDA-OOM fix, which this checkout does
+> not), plus a `CONTRACT.md` / `contract_schema.json` service contract. Last
+> commit here is 2026-06-05; the monorepo continued to 2026-06-25.
+>
+> The frontend was **rewritten**, not migrated: this repo is React/TypeScript
+> (`frontend/src/App.tsx`, `api.ts`), the monorepo is vanilla JS
+> (`project/frontend/src/kip.js`, `batch.js`, `moe.js`, `pipeline.js`).
+> Nothing here is worth porting forward.
+>
+> Note: the `origin` remote points at `github.com/yannicd03/kip-pose-detection`
+> — the GitHub repo name does not match this folder. Verify before any push.
+
 A browser tool for 6-DoF pose estimation. Upload an RGB image, a depth map
 (uint16 millimetres) and camera intrinsics; the tool runs instance
 segmentation (**YOLO26n-seg** or promptable **SAM3** concept segmentation),
